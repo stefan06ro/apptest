@@ -1,3 +1,3 @@
-module github.com/giantswarm/REPOSITORY_NAME
+module github.com/giantswarm/apptest
 
 go 1.14
