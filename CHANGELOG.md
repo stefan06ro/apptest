@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
 
+- Add initial version that implements InstallApps for use in apptestctl and
+Go integration tests.
 
 [Unreleased]: https://github.com/giantswarm/apptest/tree/master
