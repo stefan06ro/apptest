@@ -13,6 +13,7 @@ type App struct {
 	CatalogURL    string
 	Name          string
 	Namespace     string
+	SHA           string
 	Version       string
 	WaitForDeploy bool
 }

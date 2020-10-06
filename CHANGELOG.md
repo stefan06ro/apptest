@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Add support for setting app version from SHA for test catalogs.
+
 ## [0.1.0] - 2020-09-30
 
 ### Added

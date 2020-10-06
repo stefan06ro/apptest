@@ -7,6 +7,7 @@ import (
 
 	"github.com/giantswarm/apiextensions/v2/pkg/apis/application/v1alpha1"
 	"github.com/giantswarm/apiextensions/v2/pkg/label"
+	"github.com/giantswarm/appcatalog"
 	"github.com/giantswarm/backoff"
 	"github.com/giantswarm/k8sclient/v4/pkg/k8sclient"
 	"github.com/giantswarm/microerror"
@@ -110,10 +111,15 @@ func (a *AppSetup) createAppCatalogs(ctx context.Context, apps []App) error {
 }
 
 func (a *AppSetup) createApps(ctx context.Context, apps []App) error {
-	var err error
-
 	for _, app := range apps {
-		a.logger.LogCtx(ctx, "level", "debug", "message", fmt.Sprintf("creating %#q app cr", app.Name))
+		// Get app version based on whether a commit SHA or a version was
+		// provided.
+		version, err := getVersionForApp(ctx, app)
+		if err != nil {
+			return microerror.Mask(err)
+		}
+
+		a.logger.LogCtx(ctx, "level", "debug", "message", fmt.Sprintf("creating %#q app cr from catalog %#q with version %#q", app.Name, app.CatalogName, version))
 
 		appCR := &v1alpha1.App{
 			ObjectMeta: metav1.ObjectMeta{
@@ -131,7 +137,7 @@ func (a *AppSetup) createApps(ctx context.Context, apps []App) error {
 				},
 				Name:      app.Name,
 				Namespace: app.Namespace,
-				Version:   app.Version,
+				Version:   version,
 			},
 		}
 		_, err = a.k8sClient.G8sClient().ApplicationV1alpha1().Apps(namespace).Create(ctx, appCR, metav1.CreateOptions{})
@@ -190,4 +196,28 @@ func (a *AppSetup) waitForDeployedApp(ctx context.Context, appName string) error
 	a.logger.LogCtx(ctx, "level", "debug", "message", fmt.Sprintf("ensured %#q app CR is deployed", appName))
 
 	return nil
+}
+
+// getVersionForApp checks whether a commit SHA or a version was provided.
+// If a SHA was provided then we check the test catalog to get the latest version.
+// As for test catalogs the version format used is [latest version]-[sha].
+// e.g. 0.2.0-ad12c88111d7513114a1257994634e2ae81115a2
+//
+// If a version is provided then this is returned. This is to allow app
+// dependencies to be installed.
+func getVersionForApp(ctx context.Context, app App) (version string, err error) {
+	if app.SHA == "" && app.Version != "" {
+		return app.Version, nil
+	} else if app.SHA != "" && app.Version == "" {
+		version, err := appcatalog.GetLatestVersion(ctx, app.CatalogURL, app.Name, "")
+		if err != nil {
+			return "", microerror.Mask(err)
+		}
+
+		return version, nil
+	} else if app.SHA != "" && app.Version != "" {
+		return "", microerror.Maskf(executionFailedError, "both SHA and Version cannot be provided")
+	}
+
+	return "", microerror.Maskf(executionFailedError, "either SHA or Version must be provided")
 }

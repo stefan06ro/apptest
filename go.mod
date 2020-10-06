@@ -4,6 +4,7 @@ go 1.14
 
 require (
 	github.com/giantswarm/apiextensions/v2 v2.4.0
+	github.com/giantswarm/appcatalog v0.2.7
 	github.com/giantswarm/backoff v0.2.0
 	github.com/giantswarm/k8sclient/v4 v4.0.0
 	github.com/giantswarm/microerror v0.2.1
