@@ -14,6 +14,7 @@ type App struct {
 	Name          string
 	Namespace     string
 	SHA           string
+	ValuesYAML    string
 	Version       string
 	WaitForDeploy bool
 }

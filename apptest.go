@@ -12,6 +12,7 @@ import (
 	"github.com/giantswarm/k8sclient/v4/pkg/k8sclient"
 	"github.com/giantswarm/microerror"
 	"github.com/giantswarm/micrologger"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -119,12 +120,23 @@ func (a *AppSetup) createApps(ctx context.Context, apps []App) error {
 			return microerror.Mask(err)
 		}
 
+		var userValuesConfigMap string
+
+		if app.ValuesYAML != "" {
+			userValuesConfigMap = fmt.Sprintf("%s-user-values", app.Name)
+
+			err := a.createUserValuesConfigMap(ctx, userValuesConfigMap, namespace, app.ValuesYAML)
+			if err != nil {
+				return microerror.Mask(err)
+			}
+		}
+
 		a.logger.LogCtx(ctx, "level", "debug", "message", fmt.Sprintf("creating %#q app cr from catalog %#q with version %#q", app.Name, app.CatalogName, version))
 
 		appCR := &v1alpha1.App{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      app.Name,
-				Namespace: app.Namespace,
+				Namespace: namespace,
 				Labels: map[string]string{
 					// Processed by app-operator-unique.
 					label.AppOperatorVersion: uniqueAppCRVersion,
@@ -140,6 +152,12 @@ func (a *AppSetup) createApps(ctx context.Context, apps []App) error {
 				Version:   version,
 			},
 		}
+
+		if userValuesConfigMap != "" {
+			appCR.Spec.UserConfig.ConfigMap.Name = userValuesConfigMap
+			appCR.Spec.UserConfig.ConfigMap.Namespace = namespace
+		}
+
 		_, err = a.k8sClient.G8sClient().ApplicationV1alpha1().Apps(namespace).Create(ctx, appCR, metav1.CreateOptions{})
 		if apierrors.IsAlreadyExists(err) {
 			a.logger.LogCtx(ctx, "level", "debug", "message", fmt.Sprintf("%#q app CR already exists", appCR.Name))
@@ -149,6 +167,32 @@ func (a *AppSetup) createApps(ctx context.Context, apps []App) error {
 		}
 
 		a.logger.LogCtx(ctx, "level", "debug", "message", fmt.Sprintf("created %#q app cr", appCR.Name))
+	}
+
+	return nil
+}
+
+func (a *AppSetup) createUserValuesConfigMap(ctx context.Context, name, namespace, valuesYAML string) error {
+	a.logger.LogCtx(ctx, "level", "debug", "message", fmt.Sprintf("creating %#q configmap", name))
+
+	values := map[string]string{
+		"values": valuesYAML,
+	}
+	configMap := &corev1.ConfigMap{
+		Data: values,
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+	}
+
+	_, err := a.k8sClient.K8sClient().CoreV1().ConfigMaps(namespace).Create(ctx, configMap, metav1.CreateOptions{})
+	if apierrors.IsAlreadyExists(err) {
+		a.logger.LogCtx(ctx, "level", "debug", "message", fmt.Sprintf("already created configmap %#q", name))
+	} else if err != nil {
+		return microerror.Mask(err)
+	} else {
+		a.logger.LogCtx(ctx, "level", "debug", "message", fmt.Sprintf("created configmap %#q", name))
 	}
 
 	return nil
