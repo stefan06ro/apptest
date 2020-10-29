@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Remove k8sclient dependency and use controller-runtime client for managing CRs.
+
 ## [0.3.0] - 2020-10-08
 
 ### Added
