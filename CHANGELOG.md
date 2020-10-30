@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Support both explicit kubeconfigs and file paths.
+
+### Fixed
+
+- Optimize apps wait interval as app-operator has a status webhook.
+
 ## [0.4.0] - 2020-10-29
 
 ### Changed
