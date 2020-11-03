@@ -13,6 +13,7 @@ require (
 	golang.org/x/mod v0.3.0 // indirect
 	golang.org/x/tools v0.0.0-20200616133436-c1934b75d054 // indirect
 	k8s.io/api v0.18.9
+	k8s.io/apiextensions-apiserver v0.18.9
 	k8s.io/apimachinery v0.18.9
 	k8s.io/client-go v0.18.9
 	sigs.k8s.io/controller-runtime v0.6.3
