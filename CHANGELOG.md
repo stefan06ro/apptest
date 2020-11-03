@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Add new methods to the interface.
+
 ### Added
 
 - Expose method `EnsureCRDs` to register CRDs in the k8s API.
