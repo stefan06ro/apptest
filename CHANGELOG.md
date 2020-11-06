@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2020-11-06
+
 ### Fixed
 
 - Add new methods to the interface.
@@ -55,7 +57,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add initial version that implements InstallApps for use in apptestctl and
 Go integration tests.
 
-[Unreleased]: https://github.com/giantswarm/apptest/compare/v0.4.1...HEAD
+[Unreleased]: https://github.com/giantswarm/apptest/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/giantswarm/apptest/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/giantswarm/apptest/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/giantswarm/apptest/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/giantswarm/apptest/compare/v0.2.0...v0.3.0
