@@ -31,6 +31,24 @@ const (
 	uniqueAppCRVersion = "0.0.0"
 )
 
+var (
+	giantSwarmCatalogs = map[string]string{
+		"control-plane-catalog":               "https://giantswarm.github.io/control-plane-catalog/",
+		"control-plane-test-catalog":          "https://giantswarm.github.io/control-plane-test-catalog/",
+		"default":                             "https://giantswarm.github.io/default-catalog/",
+		"default-test":                        "https://giantswarm.github.io/default-test-catalog/",
+		"giantswarm":                          "https://giantswarm.github.io/giantswarm-catalog/",
+		"giantswarm-test":                     "https://giantswarm.github.io/giantswarm-test-catalog/",
+		"giantswarm-operations-platform":      "https://giantswarm.github.io/giantswarm-operations-platform-catalog/",
+		"giantswarm-operations-platform-test": "https://giantswarm.github.io/giantswarm-operations-platform-test-catalog/",
+		"giantswarm-playground":               "https://giantswarm.github.io/giantswarm-playground-catalog/",
+		"giantswarm-playground-test":          "https://giantswarm.github.io/giantswarm-playground-test-catalog/",
+		"helm-stable":                         "https://charts.helm.sh/stable/packages/",
+		"releases":                            "https://giantswarm.github.io/releases-catalog/",
+		"releases-test":                       "https://giantswarm.github.io/releases-test-catalog/",
+	}
+)
+
 // Config represents the configuration used to setup the apps.
 type Config struct {
 	KubeConfig     string
@@ -183,9 +201,12 @@ func (a *AppSetup) CtrlClient() client.Client {
 }
 
 func (a *AppSetup) createAppCatalogs(ctx context.Context, apps []App) error {
-	var err error
-
 	for _, app := range apps {
+		catalogURL, err := getCatalogURL(app)
+		if err != nil {
+			return microerror.Mask(err)
+		}
+
 		a.logger.LogCtx(ctx, "level", "debug", "message", fmt.Sprintf("creating %#q appcatalog cr", app.CatalogName))
 
 		appCatalogCR := &v1alpha1.AppCatalog{
@@ -201,7 +222,7 @@ func (a *AppSetup) createAppCatalogs(ctx context.Context, apps []App) error {
 				Title:       app.CatalogName,
 				Storage: v1alpha1.AppCatalogSpecStorage{
 					Type: "helm",
-					URL:  app.CatalogURL,
+					URL:  catalogURL,
 				},
 			},
 		}
@@ -357,6 +378,24 @@ func (a *AppSetup) waitForDeployedApp(ctx context.Context, appName string) error
 	return nil
 }
 
+// getCatalogURL returns the catalog URL for this app. If it is a Giant Swarm
+// catalog no URL needs to be provided.
+func getCatalogURL(app App) (string, error) {
+	if app.CatalogName == "" {
+		return "", microerror.Maskf(invalidConfigError, "catalog name must not be empty for app %#v", app)
+	}
+	if app.CatalogName != "" && app.CatalogURL != "" {
+		return app.CatalogURL, nil
+	}
+
+	catalogURL, exists := giantSwarmCatalogs[app.CatalogName]
+	if !exists {
+		return "", microerror.Maskf(invalidConfigError, "catalog %#q not found and no URL provided", app.CatalogName)
+	}
+
+	return catalogURL, nil
+}
+
 // getVersionForApp checks whether a commit SHA or a version was provided.
 // If a SHA was provided then we check the test catalog to get the latest version.
 // As for test catalogs the version format used is [latest version]-[sha].
@@ -365,10 +404,15 @@ func (a *AppSetup) waitForDeployedApp(ctx context.Context, appName string) error
 // If a version is provided then this is returned. This is to allow app
 // dependencies to be installed.
 func getVersionForApp(ctx context.Context, app App) (version string, err error) {
+	catalogURL, err := getCatalogURL(app)
+	if err != nil {
+		return "", microerror.Mask(err)
+	}
+
 	if app.SHA == "" && app.Version != "" {
 		return app.Version, nil
 	} else if app.SHA != "" && app.Version == "" {
-		version, err := appcatalog.GetLatestVersion(ctx, app.CatalogURL, app.Name, "")
+		version, err := appcatalog.GetLatestVersion(ctx, catalogURL, app.Name, "")
 		if err != nil {
 			return "", microerror.Mask(err)
 		}
