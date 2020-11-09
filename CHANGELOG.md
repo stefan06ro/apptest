@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Don't fail when ensuring a CRD that's already present.
+
 ## [0.5.0] - 2020-11-06
 
 ### Fixed

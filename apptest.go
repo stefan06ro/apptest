@@ -182,7 +182,9 @@ func (a *AppSetup) EnsureCRDs(ctx context.Context, crds []*apiextensionsv1.Custo
 	var err error
 	for _, crd := range crds {
 		err = a.ctrlClient.Create(ctx, crd)
-		if err != nil {
+		if apierrors.IsAlreadyExists(err) {
+			// It's ok.
+		} else if err != nil {
 			return microerror.Mask(err)
 		}
 	}
