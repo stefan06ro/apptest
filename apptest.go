@@ -414,7 +414,7 @@ func getVersionForApp(ctx context.Context, app App) (version string, err error) 
 	if app.SHA == "" && app.Version != "" {
 		return app.Version, nil
 	} else if app.SHA != "" && app.Version == "" {
-		version, err := appcatalog.GetLatestVersion(ctx, catalogURL, app.Name, "")
+		version, err := appcatalog.GetLatestVersion(ctx, catalogURL, app.Name, app.SHA)
 		if err != nil {
 			return "", microerror.Mask(err)
 		}
