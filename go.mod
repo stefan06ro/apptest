@@ -7,7 +7,7 @@ require (
 	github.com/giantswarm/appcatalog v0.3.1
 	github.com/giantswarm/backoff v0.2.0
 	github.com/giantswarm/microerror v0.3.0
-	github.com/giantswarm/micrologger v0.3.4
+	github.com/giantswarm/micrologger v0.4.0
 	github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369 // indirect
 	github.com/prometheus/client_golang v1.7.1 // indirect
 	golang.org/x/mod v0.3.0 // indirect
