@@ -250,6 +250,51 @@ func (a *AppSetup) createApps(ctx context.Context, apps []App) error {
 			return microerror.Mask(err)
 		}
 
+		a.logger.LogCtx(ctx, "level", "debug", "message", fmt.Sprintf("creating %#q app cr from catalog %#q with version %#q", app.Name, app.CatalogName, version))
+
+		var appOperatorVersion string
+
+		if app.AppOperatorVersion != "" {
+			appOperatorVersion = app.AppOperatorVersion
+		} else {
+			// Processed by app-operator-unique instance.
+			appOperatorVersion = uniqueAppCRVersion
+		}
+
+		var appCRNamespace string
+
+		if app.AppCRNamespace != "" {
+			appCRNamespace = app.AppCRNamespace
+		} else {
+			appCRNamespace = namespace
+		}
+
+		var kubeConfig v1alpha1.AppSpecKubeConfig
+
+		if app.KubeConfig != "" {
+			kubeConfigName := fmt.Sprintf("%s-kubeconfig", app.Name)
+
+			err := a.createKubeConfigSecret(ctx, kubeConfigName, namespace, app.KubeConfig)
+			if err != nil {
+				return microerror.Mask(err)
+			}
+
+			kubeConfig = v1alpha1.AppSpecKubeConfig{
+				Context: v1alpha1.AppSpecKubeConfigContext{
+					Name: kubeConfigName,
+				},
+				InCluster: false,
+				Secret: v1alpha1.AppSpecKubeConfigSecret{
+					Name:      kubeConfigName,
+					Namespace: namespace,
+				},
+			}
+		} else {
+			kubeConfig = v1alpha1.AppSpecKubeConfig{
+				InCluster: true,
+			}
+		}
+
 		var userValuesConfigMap string
 
 		if app.ValuesYAML != "" {
@@ -260,26 +305,20 @@ func (a *AppSetup) createApps(ctx context.Context, apps []App) error {
 				return microerror.Mask(err)
 			}
 		}
-
-		a.logger.LogCtx(ctx, "level", "debug", "message", fmt.Sprintf("creating %#q app cr from catalog %#q with version %#q", app.Name, app.CatalogName, version))
-
 		appCR := &v1alpha1.App{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      app.Name,
-				Namespace: namespace,
+				Namespace: appCRNamespace,
 				Labels: map[string]string{
-					// Processed by app-operator-unique.
-					label.AppOperatorVersion: uniqueAppCRVersion,
+					label.AppOperatorVersion: appOperatorVersion,
 				},
 			},
 			Spec: v1alpha1.AppSpec{
-				Catalog: app.CatalogName,
-				KubeConfig: v1alpha1.AppSpecKubeConfig{
-					InCluster: true,
-				},
-				Name:      app.Name,
-				Namespace: app.Namespace,
-				Version:   version,
+				Catalog:    app.CatalogName,
+				KubeConfig: kubeConfig,
+				Name:       app.Name,
+				Namespace:  app.Namespace,
+				Version:    version,
 			},
 		}
 
@@ -297,6 +336,40 @@ func (a *AppSetup) createApps(ctx context.Context, apps []App) error {
 		}
 
 		a.logger.LogCtx(ctx, "level", "debug", "message", fmt.Sprintf("created %#q app cr", appCR.Name))
+	}
+
+	return nil
+}
+
+func (a *AppSetup) createKubeConfigSecret(ctx context.Context, name, namespace, kubeConfig string) error {
+	a.logger.LogCtx(ctx, "level", "debug", "message", fmt.Sprintf("creating secret %#q", name))
+
+	data := map[string][]byte{
+		"kubeConfig": []byte(kubeConfig),
+	}
+	desired := &corev1.Secret{
+		Data: data,
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+	}
+
+	_, err := a.k8sClient.CoreV1().Secrets(namespace).Get(ctx, name, metav1.GetOptions{})
+	if apierrors.IsNotFound(err) {
+		_, err := a.k8sClient.CoreV1().Secrets(namespace).Create(ctx, desired, metav1.CreateOptions{})
+		if err != nil {
+			return microerror.Mask(err)
+		}
+
+		a.logger.LogCtx(ctx, "level", "debug", "message", fmt.Sprintf("created secret %#q", name))
+	} else {
+		_, err := a.k8sClient.CoreV1().Secrets(namespace).Update(ctx, desired, metav1.UpdateOptions{})
+		if err != nil {
+			return microerror.Mask(err)
+		}
+
+		a.logger.LogCtx(ctx, "level", "debug", "message", fmt.Sprintf("updated existing secret %#q", name))
 	}
 
 	return nil
@@ -331,7 +404,7 @@ func (a *AppSetup) createUserValuesConfigMap(ctx context.Context, name, namespac
 func (a *AppSetup) waitForDeployedApps(ctx context.Context, apps []App) error {
 	for _, app := range apps {
 		if app.WaitForDeploy {
-			err := a.waitForDeployedApp(ctx, app.Name)
+			err := a.waitForDeployedApp(ctx, app)
 			if err != nil {
 				return microerror.Mask(err)
 			}
@@ -343,17 +416,17 @@ func (a *AppSetup) waitForDeployedApps(ctx context.Context, apps []App) error {
 	return nil
 }
 
-func (a *AppSetup) waitForDeployedApp(ctx context.Context, appName string) error {
+func (a *AppSetup) waitForDeployedApp(ctx context.Context, testApp App) error {
 	var err error
 
-	a.logger.LogCtx(ctx, "level", "debug", "message", fmt.Sprintf("ensuring %#q app CR is %#q", appName, deployedStatus))
+	a.logger.LogCtx(ctx, "level", "debug", "message", fmt.Sprintf("ensuring %#q app CR is %#q", testApp.Name, deployedStatus))
 
 	var app v1alpha1.App
 
 	o := func() error {
 		err = a.ctrlClient.Get(
 			ctx,
-			types.NamespacedName{Name: appName, Namespace: namespace},
+			types.NamespacedName{Name: testApp.Name, Namespace: testApp.AppCRNamespace},
 			&app)
 		if err != nil {
 			return microerror.Mask(err)
@@ -375,7 +448,7 @@ func (a *AppSetup) waitForDeployedApp(ctx context.Context, appName string) error
 		return microerror.Mask(err)
 	}
 
-	a.logger.LogCtx(ctx, "level", "debug", "message", fmt.Sprintf("ensured %#q app CR is deployed", appName))
+	a.logger.LogCtx(ctx, "level", "debug", "message", fmt.Sprintf("ensured %#q app CR is deployed", testApp.Name))
 
 	return nil
 }

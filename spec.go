@@ -25,14 +25,17 @@ type Interface interface {
 }
 
 type App struct {
-	CatalogName   string
-	CatalogURL    string
-	Name          string
-	Namespace     string
-	SHA           string
-	ValuesYAML    string
-	Version       string
-	WaitForDeploy bool
+	AppCRNamespace     string
+	AppOperatorVersion string
+	CatalogName        string
+	CatalogURL         string
+	KubeConfig         string
+	Name               string
+	Namespace          string
+	SHA                string
+	ValuesYAML         string
+	Version            string
+	WaitForDeploy      bool
 }
 
 // schemeBuilder is used to extend the known types of the client-go scheme.
