@@ -22,6 +22,9 @@ type Interface interface {
 
 	// CtrlClient returns a controller-runtime client for use in automated tests.
 	CtrlClient() client.Client
+
+	// CleanUp removes created resources while installing apps.
+	CleanUp(ctx context.Context, apps []App) error
 }
 
 type App struct {

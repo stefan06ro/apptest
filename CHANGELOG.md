@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Add support for setting kubeconfig secret in app CRs for remote clusters.
+- Add clean up function to remove resources created while installing apps.
 
 ### Changed
 

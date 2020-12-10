@@ -202,6 +202,58 @@ func (a *AppSetup) CtrlClient() client.Client {
 	return a.ctrlClient
 }
 
+func (a *AppSetup) CleanUp(ctx context.Context, apps []App) error {
+	for _, app := range apps {
+		err := a.ctrlClient.Delete(ctx, &v1alpha1.App{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: app.AppCRNamespace,
+				Name:      app.Name,
+			},
+			Spec: v1alpha1.AppSpec{},
+		})
+		if apierrors.IsNotFound(err) {
+			// it's ok
+		} else if err != nil {
+			return microerror.Mask(err)
+		}
+
+		var appCRNamespace string
+		if app.AppCRNamespace != "" {
+			appCRNamespace = app.AppCRNamespace
+		} else {
+			appCRNamespace = defaultNamespace
+		}
+
+		kubeconfigSecret := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      app.Name,
+				Namespace: appCRNamespace,
+			},
+		}
+		err = a.ctrlClient.Delete(ctx, kubeconfigSecret)
+		if apierrors.IsNotFound(err) {
+			// it's ok
+		} else if err != nil {
+			return microerror.Mask(err)
+		}
+
+		userValuesConfigMap := &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      app.Name,
+				Namespace: appCRNamespace,
+			},
+		}
+		err = a.ctrlClient.Delete(ctx, userValuesConfigMap)
+		if apierrors.IsNotFound(err) {
+			// it's ok
+		} else if err != nil {
+			return microerror.Mask(err)
+		}
+	}
+
+	return nil
+}
+
 func (a *AppSetup) createAppCatalogs(ctx context.Context, apps []App) error {
 	for _, app := range apps {
 		catalogURL, err := getCatalogURL(app)
