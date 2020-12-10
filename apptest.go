@@ -338,7 +338,7 @@ func (a *AppSetup) createApps(ctx context.Context, apps []App) error {
 				InCluster: false,
 				Secret: v1alpha1.AppSpecKubeConfigSecret{
 					Name:      kubeConfigName,
-					Namespace: defaultNamespace,
+					Namespace: appCRNamespace,
 				},
 			}
 		} else {
@@ -374,9 +374,9 @@ func (a *AppSetup) createApps(ctx context.Context, apps []App) error {
 			},
 		}
 
-		if userValuesConfigMap != "" {
+		if app.ValuesYAML != "" {
 			appCR.Spec.UserConfig.ConfigMap.Name = userValuesConfigMap
-			appCR.Spec.UserConfig.ConfigMap.Namespace = defaultNamespace
+			appCR.Spec.UserConfig.ConfigMap.Namespace = appCRNamespace
 		}
 
 		err = a.ctrlClient.Create(ctx, appCR)
