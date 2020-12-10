@@ -27,7 +27,7 @@ import (
 
 const (
 	deployedStatus     = "deployed"
-	namespace          = "giantswarm"
+	defaultNamespace   = "giantswarm"
 	uniqueAppCRVersion = "0.0.0"
 )
 
@@ -266,7 +266,7 @@ func (a *AppSetup) createApps(ctx context.Context, apps []App) error {
 		if app.AppCRNamespace != "" {
 			appCRNamespace = app.AppCRNamespace
 		} else {
-			appCRNamespace = namespace
+			appCRNamespace = defaultNamespace
 		}
 
 		var kubeConfig v1alpha1.AppSpecKubeConfig
@@ -274,7 +274,7 @@ func (a *AppSetup) createApps(ctx context.Context, apps []App) error {
 		if app.KubeConfig != "" {
 			kubeConfigName := fmt.Sprintf("%s-kubeconfig", app.Name)
 
-			err := a.createKubeConfigSecret(ctx, kubeConfigName, namespace, app.KubeConfig)
+			err := a.createKubeConfigSecret(ctx, kubeConfigName, appCRNamespace, app.KubeConfig)
 			if err != nil {
 				return microerror.Mask(err)
 			}
@@ -286,7 +286,7 @@ func (a *AppSetup) createApps(ctx context.Context, apps []App) error {
 				InCluster: false,
 				Secret: v1alpha1.AppSpecKubeConfigSecret{
 					Name:      kubeConfigName,
-					Namespace: namespace,
+					Namespace: defaultNamespace,
 				},
 			}
 		} else {
@@ -300,7 +300,7 @@ func (a *AppSetup) createApps(ctx context.Context, apps []App) error {
 		if app.ValuesYAML != "" {
 			userValuesConfigMap = fmt.Sprintf("%s-user-values", app.Name)
 
-			err := a.createUserValuesConfigMap(ctx, userValuesConfigMap, namespace, app.ValuesYAML)
+			err := a.createUserValuesConfigMap(ctx, userValuesConfigMap, appCRNamespace, app.ValuesYAML)
 			if err != nil {
 				return microerror.Mask(err)
 			}
@@ -324,7 +324,7 @@ func (a *AppSetup) createApps(ctx context.Context, apps []App) error {
 
 		if userValuesConfigMap != "" {
 			appCR.Spec.UserConfig.ConfigMap.Name = userValuesConfigMap
-			appCR.Spec.UserConfig.ConfigMap.Namespace = namespace
+			appCR.Spec.UserConfig.ConfigMap.Namespace = defaultNamespace
 		}
 
 		err = a.ctrlClient.Create(ctx, appCR)
@@ -342,7 +342,7 @@ func (a *AppSetup) createApps(ctx context.Context, apps []App) error {
 }
 
 func (a *AppSetup) createKubeConfigSecret(ctx context.Context, name, namespace, kubeConfig string) error {
-	a.logger.LogCtx(ctx, "level", "debug", "message", fmt.Sprintf("creating secret %#q", name))
+	a.logger.LogCtx(ctx, "level", "debug", "message", fmt.Sprintf("creating secret '%s/%s'", namespace, name))
 
 	data := map[string][]byte{
 		"kubeConfig": []byte(kubeConfig),
@@ -362,21 +362,21 @@ func (a *AppSetup) createKubeConfigSecret(ctx context.Context, name, namespace, 
 			return microerror.Mask(err)
 		}
 
-		a.logger.LogCtx(ctx, "level", "debug", "message", fmt.Sprintf("created secret %#q", name))
+		a.logger.LogCtx(ctx, "level", "debug", "message", fmt.Sprintf("created secret '%s/%s'", namespace, name))
 	} else {
 		_, err := a.k8sClient.CoreV1().Secrets(namespace).Update(ctx, desired, metav1.UpdateOptions{})
 		if err != nil {
 			return microerror.Mask(err)
 		}
 
-		a.logger.LogCtx(ctx, "level", "debug", "message", fmt.Sprintf("updated existing secret %#q", name))
+		a.logger.LogCtx(ctx, "level", "debug", "message", fmt.Sprintf("updated existing secret '%s/%s'", namespace, name))
 	}
 
 	return nil
 }
 
 func (a *AppSetup) createUserValuesConfigMap(ctx context.Context, name, namespace, valuesYAML string) error {
-	a.logger.LogCtx(ctx, "level", "debug", "message", fmt.Sprintf("creating %#q configmap", name))
+	a.logger.LogCtx(ctx, "level", "debug", "message", fmt.Sprintf("creating '%s/%s' configmap", namespace, name))
 
 	values := map[string]string{
 		"values": valuesYAML,
@@ -391,11 +391,11 @@ func (a *AppSetup) createUserValuesConfigMap(ctx context.Context, name, namespac
 
 	_, err := a.k8sClient.CoreV1().ConfigMaps(namespace).Create(ctx, configMap, metav1.CreateOptions{})
 	if apierrors.IsAlreadyExists(err) {
-		a.logger.LogCtx(ctx, "level", "debug", "message", fmt.Sprintf("already created configmap %#q", name))
+		a.logger.LogCtx(ctx, "level", "debug", "message", fmt.Sprintf("already created configmap '%s/%s'", namespace, name))
 	} else if err != nil {
 		return microerror.Mask(err)
 	} else {
-		a.logger.LogCtx(ctx, "level", "debug", "message", fmt.Sprintf("created configmap %#q", name))
+		a.logger.LogCtx(ctx, "level", "debug", "message", fmt.Sprintf("created configmap '%s/%s'", namespace, name))
 	}
 
 	return nil
@@ -419,7 +419,7 @@ func (a *AppSetup) waitForDeployedApps(ctx context.Context, apps []App) error {
 func (a *AppSetup) waitForDeployedApp(ctx context.Context, testApp App) error {
 	var err error
 
-	a.logger.LogCtx(ctx, "level", "debug", "message", fmt.Sprintf("ensuring %#q app CR is %#q", testApp.Name, deployedStatus))
+	a.logger.LogCtx(ctx, "level", "debug", "message", fmt.Sprintf("ensuring '%s/%s' app CR is %#q", testApp.AppCRNamespace, testApp.Name, deployedStatus))
 
 	var app v1alpha1.App
 
@@ -448,7 +448,7 @@ func (a *AppSetup) waitForDeployedApp(ctx context.Context, testApp App) error {
 		return microerror.Mask(err)
 	}
 
-	a.logger.LogCtx(ctx, "level", "debug", "message", fmt.Sprintf("ensured %#q app CR is deployed", testApp.Name))
+	a.logger.LogCtx(ctx, "level", "debug", "message", fmt.Sprintf("ensured '%s/%s' app CR is deployed", testApp.AppCRNamespace, testApp.Name))
 
 	return nil
 }

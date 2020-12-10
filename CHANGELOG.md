@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Add support for setting kubeconfig secret in app CRs for remote clusters.
 
+### Changed
+
+- User config values are created on App namespace.
+
 ## [0.7.1] - 2020-11-26
 
 ### Fixed
