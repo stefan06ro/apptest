@@ -486,7 +486,7 @@ func (a *AppSetup) waitForDeployedApp(ctx context.Context, testApp App) error {
 	o := func() error {
 		err = a.ctrlClient.Get(
 			ctx,
-			types.NamespacedName{Name: testApp.Name, Namespace: testApp.AppCRNamespace},
+			types.NamespacedName{Name: testApp.Name, Namespace: appCRNamespace},
 			&app)
 		if err != nil {
 			return microerror.Mask(err)
@@ -508,7 +508,7 @@ func (a *AppSetup) waitForDeployedApp(ctx context.Context, testApp App) error {
 		return microerror.Mask(err)
 	}
 
-	a.logger.LogCtx(ctx, "level", "debug", "message", fmt.Sprintf("ensured '%s/%s' app CR is deployed", testApp.AppCRNamespace, testApp.Name))
+	a.logger.LogCtx(ctx, "level", "debug", "message", fmt.Sprintf("ensured '%s/%s' app CR is deployed", appCRNamespace, testApp.Name))
 
 	return nil
 }
