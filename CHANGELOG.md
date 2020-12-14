@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.1] - 2020-12-14
+
 ### Fixed
 
 - Fix namespace handling when waiting for deployed apps.
@@ -94,7 +96,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add initial version that implements InstallApps for use in apptestctl and
 Go integration tests.
 
-[Unreleased]: https://github.com/giantswarm/apptest/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/giantswarm/apptest/compare/v0.8.1...HEAD
+[0.8.1]: https://github.com/giantswarm/apptest/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/giantswarm/apptest/compare/v0.7.1...v0.8.0
 [0.7.1]: https://github.com/giantswarm/apptest/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/giantswarm/apptest/compare/v0.6.0...v0.7.0
