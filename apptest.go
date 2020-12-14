@@ -471,7 +471,15 @@ func (a *AppSetup) waitForDeployedApps(ctx context.Context, apps []App) error {
 func (a *AppSetup) waitForDeployedApp(ctx context.Context, testApp App) error {
 	var err error
 
-	a.logger.LogCtx(ctx, "level", "debug", "message", fmt.Sprintf("ensuring '%s/%s' app CR is %#q", testApp.AppCRNamespace, testApp.Name, deployedStatus))
+	var appCRNamespace string
+
+	if testApp.AppCRNamespace != "" {
+		appCRNamespace = testApp.AppCRNamespace
+	} else {
+		appCRNamespace = defaultNamespace
+	}
+
+	a.logger.LogCtx(ctx, "level", "debug", "message", fmt.Sprintf("ensuring '%s/%s' app CR is %#q", appCRNamespace, testApp.Name, deployedStatus))
 
 	var app v1alpha1.App
 
