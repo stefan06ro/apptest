@@ -3,6 +3,7 @@ package apptest
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	v1alpha1 "github.com/giantswarm/apiextensions/v3/pkg/apis/application/v1alpha1"
@@ -27,6 +28,8 @@ import (
 
 const (
 	deployedStatus     = "deployed"
+	failedStatus       = "failed"
+	notInstalledStatus = "not-installed"
 	defaultNamespace   = "giantswarm"
 	uniqueAppCRVersion = "0.0.0"
 )
@@ -170,6 +173,52 @@ func (a *AppSetup) InstallApps(ctx context.Context, apps []App) error {
 	}
 
 	err = a.waitForDeployedApps(ctx, apps)
+	if err != nil {
+		return microerror.Mask(err)
+	}
+
+	return nil
+}
+
+func (a *AppSetup) UpgradeApp(ctx context.Context, current, desired App) error {
+	var err error
+
+	err = a.createAppCatalogs(ctx, []App{current, desired})
+	if err != nil {
+		return microerror.Mask(err)
+	}
+
+	// if current version have no specific version, use the latest instead.
+	if current.Version == "" && current.SHA == "" {
+		catalogURL, err := getCatalogURL(current)
+		if err != nil {
+			return microerror.Mask(err)
+		}
+
+		version, err := appcatalog.GetLatestVersion(ctx, catalogURL, current.Name, "")
+		if err != nil {
+			return microerror.Mask(err)
+		}
+
+		current.Version = version
+	}
+
+	err = a.createApps(ctx, []App{current})
+	if err != nil {
+		return microerror.Mask(err)
+	}
+
+	err = a.waitForDeployedApp(ctx, current)
+	if err != nil {
+		return microerror.Mask(err)
+	}
+
+	err = a.updateApp(ctx, desired)
+	if err != nil {
+		return microerror.Mask(err)
+	}
+
+	err = a.waitForDeployedApp(ctx, desired)
 	if err != nil {
 		return microerror.Mask(err)
 	}
@@ -453,6 +502,67 @@ func (a *AppSetup) createUserValuesConfigMap(ctx context.Context, name, namespac
 	return nil
 }
 
+func (a *AppSetup) updateApp(ctx context.Context, desired App) error {
+	var err error
+	var currentApp v1alpha1.App
+
+	var appCRNamespace string
+	if desired.AppCRNamespace != "" {
+		appCRNamespace = desired.AppCRNamespace
+	} else {
+		appCRNamespace = defaultNamespace
+	}
+
+	a.logger.Debugf(ctx, "finding %#q app in namespace %#q", appCRNamespace)
+
+	err = a.ctrlClient.Get(
+		ctx,
+		types.NamespacedName{Name: desired.Name, Namespace: appCRNamespace},
+		&currentApp)
+	if err != nil {
+		return microerror.Mask(err)
+	}
+
+	a.logger.Debugf(ctx, "found %#q app in namespace %#q", appCRNamespace)
+
+	desiredApp := currentApp.DeepCopy()
+
+	var version string
+	{
+		catalogURL, err := getCatalogURL(desired)
+		if err != nil {
+			return microerror.Mask(err)
+		}
+
+		var appVersion string
+		if desired.SHA != "" {
+			appVersion = desired.SHA
+		} else {
+			appVersion = desired.Version
+		}
+
+		version, err = appcatalog.GetLatestVersion(ctx, catalogURL, desired.Name, appVersion)
+		if err != nil {
+			return microerror.Mask(err)
+		}
+	}
+
+	desiredApp.Spec.Version = version
+	desiredApp.Spec.Catalog = desired.CatalogName
+
+	a.logger.Debugf(ctx, "updating %#q app cr in namespace %#q", currentApp.Name, appCRNamespace)
+	err = a.ctrlClient.Update(
+		ctx,
+		desiredApp)
+	if err != nil {
+		return microerror.Mask(err)
+	}
+
+	a.logger.Debugf(ctx, "updated %#q app cr in namespace %#q", currentApp.Name, appCRNamespace)
+
+	return nil
+}
+
 func (a *AppSetup) waitForDeployedApps(ctx context.Context, apps []App) error {
 	for _, app := range apps {
 		if app.WaitForDeploy {
@@ -491,11 +601,30 @@ func (a *AppSetup) waitForDeployedApp(ctx context.Context, testApp App) error {
 		if err != nil {
 			return microerror.Mask(err)
 		}
-		if app.Status.Release.Status != deployedStatus {
-			return microerror.Maskf(executionFailedError, "waiting for %#q, current %#q", deployedStatus, app.Status.Release.Status)
+
+		switch app.Status.Release.Status {
+		case notInstalledStatus, failedStatus:
+			return backoff.Permanent(microerror.Maskf(executionFailedError, "status %#q, reason: %s", app.Status.Release.Status, app.Status.Release.Reason))
+		case deployedStatus:
+			if testApp.SHA != "" && strings.HasSuffix(app.Status.Version, testApp.SHA) {
+				return nil
+			}
+
+			if testApp.Version != "" && testApp.Version == app.Status.Version {
+				return nil
+			}
+
+			var appVersion string
+			if testApp.SHA != "" {
+				appVersion = testApp.SHA
+			} else {
+				appVersion = testApp.Version
+			}
+
+			return microerror.Maskf(executionFailedError, "waiting for version contains %#q, current version %#q", appVersion, app.Status.Version)
 		}
 
-		return nil
+		return microerror.Maskf(executionFailedError, "waiting for %#q, current %#q", deployedStatus, app.Status.Release.Status)
 	}
 
 	n := func(err error, t time.Duration) {
