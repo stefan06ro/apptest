@@ -513,7 +513,7 @@ func (a *AppSetup) updateApp(ctx context.Context, desired App) error {
 		appCRNamespace = defaultNamespace
 	}
 
-	a.logger.Debugf(ctx, "finding %#q app in namespace %#q", appCRNamespace)
+	a.logger.Debugf(ctx, "finding %#q app in namespace %#q", desired.Name, appCRNamespace)
 
 	err = a.ctrlClient.Get(
 		ctx,
@@ -523,7 +523,7 @@ func (a *AppSetup) updateApp(ctx context.Context, desired App) error {
 		return microerror.Mask(err)
 	}
 
-	a.logger.Debugf(ctx, "found %#q app in namespace %#q", appCRNamespace)
+	a.logger.Debugf(ctx, "found %#q app in namespace %#q", desired.Name, appCRNamespace)
 
 	desiredApp := currentApp.DeepCopy()
 
@@ -551,6 +551,9 @@ func (a *AppSetup) updateApp(ctx context.Context, desired App) error {
 	desiredApp.Spec.Catalog = desired.CatalogName
 
 	a.logger.Debugf(ctx, "updating %#q app cr in namespace %#q", currentApp.Name, appCRNamespace)
+	a.logger.Debugf(ctx, "desired version: %#q", version)
+	a.logger.Debugf(ctx, "desired catalog: %#q", desired.CatalogName)
+
 	err = a.ctrlClient.Update(
 		ctx,
 		desiredApp)
