@@ -1,0 +1,20 @@
+name: apptest-app
+namespace: kube-system
+port: 10301
+portName: metrics
+
+replicas: 1
+
+image:
+  registry: quay.io
+  name: giantswarm/kube-state-metrics
+  # when updating tag make sure to also keep appVersion in Chart.yaml in sync
+  tag: v1.9.2
+
+resources:
+  limits:
+    cpu: 100m
+    memory: 300Mi
+  requests:
+    cpu: 100m
+    memory: 300Mi
