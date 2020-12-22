@@ -15,7 +15,7 @@ workflows:
 
       - architect/push-to-app-catalog:
           context: "architect"
-          name: push-apptest-app-to-control-plane-catalog
+          name: push-apptest-app-to-control-plane-test-catalog
           app_catalog: "control-plane-test-catalog"
           app_catalog_test: "control-plane-test-catalog"
           chart: "apptest-app"
@@ -37,4 +37,28 @@ workflows:
               ignore:
                 - master
           requires:
-            - push-apptest-app-to-control-plane-catalog
+            - push-apptest-app-to-control-plane-test-catalog
+
+      - architect/integration-test:
+          name: "ensure-crds-integration-test"
+          install-app-platform: true
+          test-dir: "integration/test/ensurecrds"
+          filters:
+            # Do not trigger the job on merge to master.
+            branches:
+              ignore:
+                - master
+          requires:
+            - push-apptest-app-to-control-plane-test-catalog
+
+      - architect/integration-test:
+          name: "external-catalog-integration-test"
+          install-app-platform: true
+          test-dir: "integration/test/externalcatalog"
+          filters:
+            # Do not trigger the job on merge to master.
+            branches:
+              ignore:
+                - master
+          requires:
+            - push-apptest-app-to-control-plane-test-catalog

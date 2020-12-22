@@ -120,6 +120,79 @@ if err != nil {
 }
 ```
 
+## Ensure CRDs
+
+Install a CRD from our [apiextensions] library for use in a test.
+
+Test: [ensure-crds-test]
+
+```go
+import (
+	monitoringv1alpha1 "github.com/giantswarm/apiextensions/v3/pkg/apis/monitoring/v1alpha1"
+	"github.com/giantswarm/apiextensions/v3/pkg/crd"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+)
+
+// Add the extra CRDs you need to the scheme.
+appSchemeBuilder := runtime.SchemeBuilder{
+  monitoringv1alpha1.AddToScheme,
+}
+err = appSchemeBuilder.AddToScheme(runtimeScheme)
+if err != nil {
+  t.Fatalf("expected nil got %#q", err)
+}
+
+c := apptest.Config{
+  Logger: config.Logger,
+  Scheme: runtimeScheme,
+
+  KubeConfigPath: env.KubeConfigPath(),
+}
+
+appTest, err := apptest.New(c)
+if err != nil {
+  t.Fatalf("expected nil got %#q", err)
+}
+
+// Define the CRDs you wish to install.
+crds := []*apiextensionsv1.CustomResourceDefinition {
+  crd.LoadV1("cluster.x-k8s.io", "Cluster"),
+}
+
+err = appTest.EnsureCRDs(ctx, crds)
+if err != nil {
+    t.Fatalf("expected nil got %#q", err)
+}
+```
+
+## External catalog
+
+A list of known Giant Swarm catalogs is maintained in apptest to avoid needing
+to set the catalog URL. But installing from external catalogs is also possible.
+
+Test: [external-catalog-test]
+
+```go
+{
+  apps := []apptest.App{
+    {
+      // Install app from an external catalog. 
+      CatalogName:   "flux", 
+      CatalogURL:   "https://charts.fluxcd.io/", // Specify the catalog URL
+      Name:          "flux",
+      Namespace:     "giantswarm",
+      Version:       "1.5.0", // Specify the version you need.
+      WaitForDeploy: true,
+    },
+  }
+  err = appTest.InstallApps(ctx, apps)
+  if err != nil {
+    t.Fatalf("expected nil got %#q", err)
+  }
+}
+```
+
 [app CR]: https://docs.giantswarm.io/reference/cp-k8s-api/apps.application.giantswarm.io/
 [apiextensions]: https://github.com/giantswarm/apiextensions
 [apptestctl]: https://github.com/giantswarm/apptestctl
@@ -129,3 +202,5 @@ if err != nil {
 [kind]: https://kind.sigs.k8s.io/
 
 [basic-test]: https://github.com/giantswarm/apptest/tree/master/integration/test/basic/basic.go
+[ensure-crds-test]: https://github.com/giantswarm/apptest/tree/master/integration/test/ensurecrds/ensure_crds.go
+[external-catalog-test]: https://github.com/giantswarm/apptest/tree/master/integration/test/externalcatalog/external_catalog.go

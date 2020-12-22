@@ -230,10 +230,8 @@ func (a *AppSetup) UpgradeApp(ctx context.Context, current, desired App) error {
 func (a *AppSetup) EnsureCRDs(ctx context.Context, crds []*apiextensionsv1.CustomResourceDefinition) error {
 	var err error
 	for _, crd := range crds {
-		err = a.ctrlClient.Create(ctx, crd)
-		if apierrors.IsAlreadyExists(err) {
-			// It's ok.
-		} else if err != nil {
+		err = a.ensureCRD(ctx, crd)
+		if err != nil {
 			return microerror.Mask(err)
 		}
 	}
@@ -497,6 +495,47 @@ func (a *AppSetup) createUserValuesConfigMap(ctx context.Context, name, namespac
 		return microerror.Mask(err)
 	} else {
 		a.logger.LogCtx(ctx, "level", "debug", "message", fmt.Sprintf("created configmap '%s/%s'", namespace, name))
+	}
+
+	return nil
+}
+
+func (a *AppSetup) ensureCRD(ctx context.Context, crd *apiextensionsv1.CustomResourceDefinition) error {
+	var err error
+
+	err = a.ctrlClient.Create(ctx, crd)
+	if apierrors.IsAlreadyExists(err) {
+		// It's ok.
+	} else if err != nil {
+		return microerror.Mask(err)
+	}
+
+	updatedCRD := &apiextensionsv1.CustomResourceDefinition{}
+
+	o := func() error {
+		err = a.ctrlClient.Get(ctx, types.NamespacedName{Name: crd.Name}, updatedCRD)
+		if err != nil {
+			return microerror.Mask(err)
+		}
+
+		for _, condition := range updatedCRD.Status.Conditions {
+			if condition.Type == "Established" {
+				// Fall through.
+				return nil
+			}
+		}
+
+		return microerror.Maskf(executionFailedError, "CRD %#q is not established yet", crd.Name)
+	}
+
+	n := func(err error, t time.Duration) {
+		a.logger.Log("level", "debug", "message", fmt.Sprintf("failed to get CRD '%s': retrying in %s", crd.Name, t), "stack", fmt.Sprintf("%v", err))
+	}
+
+	b := backoff.NewExponential(1*time.Minute, 10*time.Second)
+	err = backoff.RetryNotify(o, b, n)
+	if err != nil {
+		return microerror.Mask(err)
 	}
 
 	return nil
