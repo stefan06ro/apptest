@@ -308,7 +308,7 @@ func (a *AppSetup) createAppCatalogs(ctx context.Context, apps []App) error {
 			return microerror.Mask(err)
 		}
 
-		a.logger.LogCtx(ctx, "level", "debug", "message", fmt.Sprintf("creating %#q appcatalog cr", app.CatalogName))
+		a.logger.Debugf(ctx, "creating %#q appcatalog cr", app.CatalogName)
 
 		appCatalogCR := &v1alpha1.AppCatalog{
 			ObjectMeta: metav1.ObjectMeta{
@@ -329,12 +329,12 @@ func (a *AppSetup) createAppCatalogs(ctx context.Context, apps []App) error {
 		}
 		err = a.ctrlClient.Create(ctx, appCatalogCR)
 		if apierrors.IsAlreadyExists(err) {
-			a.logger.LogCtx(ctx, "level", "debug", "message", fmt.Sprintf("%#q appcatalog CR already exists", appCatalogCR.Name))
+			a.logger.Debugf(ctx, "%#q appcatalog CR already exists", appCatalogCR.Name)
 		} else if err != nil {
 			return microerror.Mask(err)
 		}
 
-		a.logger.LogCtx(ctx, "level", "debug", "message", fmt.Sprintf("created %#q appcatalog cr", app.CatalogName))
+		a.logger.Debugf(ctx, "created %#q appcatalog cr", app.CatalogName)
 	}
 
 	return nil
@@ -349,7 +349,7 @@ func (a *AppSetup) createApps(ctx context.Context, apps []App) error {
 			return microerror.Mask(err)
 		}
 
-		a.logger.LogCtx(ctx, "level", "debug", "message", fmt.Sprintf("creating %#q app cr from catalog %#q with version %#q", app.Name, app.CatalogName, version))
+		a.logger.Debugf(ctx, "creating %#q app cr from catalog %#q with version %#q", app.Name, app.CatalogName, version)
 
 		var appOperatorVersion string
 
@@ -428,20 +428,20 @@ func (a *AppSetup) createApps(ctx context.Context, apps []App) error {
 
 		err = a.ctrlClient.Create(ctx, appCR)
 		if apierrors.IsAlreadyExists(err) {
-			a.logger.LogCtx(ctx, "level", "debug", "message", fmt.Sprintf("%#q app CR already exists", appCR.Name))
+			a.logger.Debugf(ctx, "%#q app CR already exists", appCR.Name)
 			return nil
 		} else if err != nil {
 			return microerror.Mask(err)
 		}
 
-		a.logger.LogCtx(ctx, "level", "debug", "message", fmt.Sprintf("created %#q app cr", appCR.Name))
+		a.logger.Debugf(ctx, "created %#q app cr", appCR.Name)
 	}
 
 	return nil
 }
 
 func (a *AppSetup) createKubeConfigSecret(ctx context.Context, name, namespace, kubeConfig string) error {
-	a.logger.LogCtx(ctx, "level", "debug", "message", fmt.Sprintf("creating secret '%s/%s'", namespace, name))
+	a.logger.Debugf(ctx, "creating secret '%s/%s'", namespace, name)
 
 	data := map[string][]byte{
 		"kubeConfig": []byte(kubeConfig),
@@ -461,21 +461,21 @@ func (a *AppSetup) createKubeConfigSecret(ctx context.Context, name, namespace, 
 			return microerror.Mask(err)
 		}
 
-		a.logger.LogCtx(ctx, "level", "debug", "message", fmt.Sprintf("created secret '%s/%s'", namespace, name))
+		a.logger.Debugf(ctx, "created secret '%s/%s'", namespace, name)
 	} else {
 		_, err := a.k8sClient.CoreV1().Secrets(namespace).Update(ctx, desired, metav1.UpdateOptions{})
 		if err != nil {
 			return microerror.Mask(err)
 		}
 
-		a.logger.LogCtx(ctx, "level", "debug", "message", fmt.Sprintf("updated existing secret '%s/%s'", namespace, name))
+		a.logger.Debugf(ctx, "updated existing secret '%s/%s'", namespace, name)
 	}
 
 	return nil
 }
 
 func (a *AppSetup) createUserValuesConfigMap(ctx context.Context, name, namespace, valuesYAML string) error {
-	a.logger.LogCtx(ctx, "level", "debug", "message", fmt.Sprintf("creating '%s/%s' configmap", namespace, name))
+	a.logger.Debugf(ctx, "creating '%s/%s' configmap", namespace, name)
 
 	values := map[string]string{
 		"values": valuesYAML,
@@ -490,11 +490,11 @@ func (a *AppSetup) createUserValuesConfigMap(ctx context.Context, name, namespac
 
 	_, err := a.k8sClient.CoreV1().ConfigMaps(namespace).Create(ctx, configMap, metav1.CreateOptions{})
 	if apierrors.IsAlreadyExists(err) {
-		a.logger.LogCtx(ctx, "level", "debug", "message", fmt.Sprintf("already created configmap '%s/%s'", namespace, name))
+		a.logger.Debugf(ctx, "already created configmap '%s/%s'", namespace, name)
 	} else if err != nil {
 		return microerror.Mask(err)
 	} else {
-		a.logger.LogCtx(ctx, "level", "debug", "message", fmt.Sprintf("created configmap '%s/%s'", namespace, name))
+		a.logger.Debugf(ctx, "created configmap '%s/%s'", namespace, name)
 	}
 
 	return nil
@@ -529,7 +529,7 @@ func (a *AppSetup) ensureCRD(ctx context.Context, crd *apiextensionsv1.CustomRes
 	}
 
 	n := func(err error, t time.Duration) {
-		a.logger.Log("level", "debug", "message", fmt.Sprintf("failed to get CRD '%s': retrying in %s", crd.Name, t), "stack", fmt.Sprintf("%v", err))
+		a.logger.Errorf(ctx, err, "failed to get CRD '%s': retrying in %s", crd.Name, t)
 	}
 
 	b := backoff.NewExponential(1*time.Minute, 10*time.Second)
@@ -613,7 +613,7 @@ func (a *AppSetup) waitForDeployedApps(ctx context.Context, apps []App) error {
 				return microerror.Mask(err)
 			}
 		} else {
-			a.logger.LogCtx(ctx, "level", "debug", "message", fmt.Sprintf("skipping wait for deploy of %#q app cr", app.Name))
+			a.logger.Debugf(ctx, "skipping wait for deploy of %#q app cr", app.Name)
 		}
 	}
 
@@ -631,7 +631,7 @@ func (a *AppSetup) waitForDeployedApp(ctx context.Context, testApp App) error {
 		appCRNamespace = defaultNamespace
 	}
 
-	a.logger.LogCtx(ctx, "level", "debug", "message", fmt.Sprintf("ensuring '%s/%s' app CR is %#q", appCRNamespace, testApp.Name, deployedStatus))
+	a.logger.Debugf(ctx, "ensuring '%s/%s' app CR is %#q", appCRNamespace, testApp.Name, deployedStatus)
 
 	var app v1alpha1.App
 
@@ -670,7 +670,7 @@ func (a *AppSetup) waitForDeployedApp(ctx context.Context, testApp App) error {
 	}
 
 	n := func(err error, t time.Duration) {
-		a.logger.Log("level", "debug", "message", fmt.Sprintf("failed to get app CR status '%s': retrying in %s", deployedStatus, t), "stack", fmt.Sprintf("%v", err))
+		a.logger.Errorf(ctx, err, "failed to get app CR status '%s': retrying in %s", deployedStatus, t)
 	}
 
 	b := backoff.NewConstant(20*time.Minute, 10*time.Second)
@@ -679,7 +679,7 @@ func (a *AppSetup) waitForDeployedApp(ctx context.Context, testApp App) error {
 		return microerror.Mask(err)
 	}
 
-	a.logger.LogCtx(ctx, "level", "debug", "message", fmt.Sprintf("ensured '%s/%s' app CR is deployed", appCRNamespace, testApp.Name))
+	a.logger.Debugf(ctx, "ensured '%s/%s' app CR is deployed", appCRNamespace, testApp.Name)
 
 	return nil
 }

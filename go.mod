@@ -7,7 +7,7 @@ require (
 	github.com/giantswarm/appcatalog v0.3.2
 	github.com/giantswarm/backoff v0.2.0
 	github.com/giantswarm/microerror v0.3.0
-	github.com/giantswarm/micrologger v0.4.0
+	github.com/giantswarm/micrologger v0.5.0
 	k8s.io/api v0.19.2
 	k8s.io/apiextensions-apiserver v0.19.2
 	k8s.io/apimachinery v0.19.2
