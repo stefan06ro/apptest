@@ -360,6 +360,14 @@ func (a *AppSetup) createApps(ctx context.Context, apps []App) error {
 			appOperatorVersion = uniqueAppCRVersion
 		}
 
+		var appCRName string
+
+		if app.AppCRName != "" {
+			appCRName = app.AppCRName
+		} else {
+			appCRName = app.Name
+		}
+
 		var appCRNamespace string
 
 		if app.AppCRNamespace != "" {
@@ -406,10 +414,11 @@ func (a *AppSetup) createApps(ctx context.Context, apps []App) error {
 		}
 		appCR := &v1alpha1.App{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      app.Name,
+				Name:      appCRName,
 				Namespace: appCRNamespace,
 				Labels: map[string]string{
 					label.AppOperatorVersion: appOperatorVersion,
+					label.AppKubernetesName:  app.Name,
 				},
 			},
 			Spec: v1alpha1.AppSpec{

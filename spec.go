@@ -32,6 +32,7 @@ type Interface interface {
 }
 
 type App struct {
+	AppCRName          string
 	AppCRNamespace     string
 	AppOperatorVersion string
 	CatalogName        string
