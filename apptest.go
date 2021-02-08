@@ -554,6 +554,13 @@ func (a *AppSetup) updateApp(ctx context.Context, desired App) error {
 	var err error
 	var currentApp v1alpha1.App
 
+	var appCRName string
+	if desired.AppCRName != "" {
+		appCRName = desired.AppCRName
+	} else {
+		appCRName = desired.Name
+	}
+
 	var appCRNamespace string
 	if desired.AppCRNamespace != "" {
 		appCRNamespace = desired.AppCRNamespace
@@ -561,17 +568,17 @@ func (a *AppSetup) updateApp(ctx context.Context, desired App) error {
 		appCRNamespace = defaultNamespace
 	}
 
-	a.logger.Debugf(ctx, "finding %#q app in namespace %#q", desired.Name, appCRNamespace)
+	a.logger.Debugf(ctx, "finding %#q app in namespace %#q", appCRName, appCRNamespace)
 
 	err = a.ctrlClient.Get(
 		ctx,
-		types.NamespacedName{Name: desired.Name, Namespace: appCRNamespace},
+		types.NamespacedName{Name: appCRName, Namespace: appCRNamespace},
 		&currentApp)
 	if err != nil {
 		return microerror.Mask(err)
 	}
 
-	a.logger.Debugf(ctx, "found %#q app in namespace %#q", desired.Name, appCRNamespace)
+	a.logger.Debugf(ctx, "found %#q app in namespace %#q", appCRName, appCRNamespace)
 
 	desiredApp := currentApp.DeepCopy()
 
@@ -632,6 +639,14 @@ func (a *AppSetup) waitForDeployedApps(ctx context.Context, apps []App) error {
 func (a *AppSetup) waitForDeployedApp(ctx context.Context, testApp App) error {
 	var err error
 
+	var appCRName string
+
+	if testApp.AppCRName != "" {
+		appCRName = testApp.AppCRName
+	} else {
+		appCRName = testApp.Name
+	}
+
 	var appCRNamespace string
 
 	if testApp.AppCRNamespace != "" {
@@ -640,14 +655,14 @@ func (a *AppSetup) waitForDeployedApp(ctx context.Context, testApp App) error {
 		appCRNamespace = defaultNamespace
 	}
 
-	a.logger.Debugf(ctx, "ensuring '%s/%s' app CR is %#q", appCRNamespace, testApp.Name, deployedStatus)
+	a.logger.Debugf(ctx, "ensuring '%s/%s' app CR is %#q", appCRNamespace, appCRName, deployedStatus)
 
 	var app v1alpha1.App
 
 	o := func() error {
 		err = a.ctrlClient.Get(
 			ctx,
-			types.NamespacedName{Name: testApp.Name, Namespace: appCRNamespace},
+			types.NamespacedName{Name: appCRName, Namespace: appCRNamespace},
 			&app)
 		if err != nil {
 			return microerror.Mask(err)

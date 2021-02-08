@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Extend support for setting the app CR name.
+
 ## [0.10.1] - 2021-02-08
 
 ### Fixed
