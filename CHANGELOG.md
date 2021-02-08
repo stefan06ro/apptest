@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Revert `sigs.k8s.io/controller-runtime` to v0.6.4.
+
 ## [0.10.0] - 2021-02-03
 
 ### Added
