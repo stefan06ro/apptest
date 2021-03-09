@@ -407,7 +407,7 @@ func (a *AppSetup) createApps(ctx context.Context, apps []App) error {
 		if app.ValuesYAML != "" {
 			userValuesConfigMap = fmt.Sprintf("%s-user-values", app.Name)
 
-			err := a.createUserValuesConfigMap(ctx, userValuesConfigMap, appCRNamespace, app.ValuesYAML)
+			err := a.ensureUserValuesConfigMap(ctx, userValuesConfigMap, appCRNamespace, app.ValuesYAML)
 			if err != nil {
 				return microerror.Mask(err)
 			}
@@ -483,9 +483,7 @@ func (a *AppSetup) createKubeConfigSecret(ctx context.Context, name, namespace, 
 	return nil
 }
 
-func (a *AppSetup) createUserValuesConfigMap(ctx context.Context, name, namespace, valuesYAML string) error {
-	a.logger.Debugf(ctx, "creating '%s/%s' configmap", namespace, name)
-
+func (a *AppSetup) ensureUserValuesConfigMap(ctx context.Context, name, namespace, valuesYAML string) error {
 	values := map[string]string{
 		"values": valuesYAML,
 	}
@@ -497,14 +495,29 @@ func (a *AppSetup) createUserValuesConfigMap(ctx context.Context, name, namespac
 		},
 	}
 
-	_, err := a.k8sClient.CoreV1().ConfigMaps(namespace).Create(ctx, configMap, metav1.CreateOptions{})
-	if apierrors.IsAlreadyExists(err) {
-		a.logger.Debugf(ctx, "already created configmap '%s/%s'", namespace, name)
-	} else if err != nil {
-		return microerror.Mask(err)
-	} else {
+	_, err := a.k8sClient.CoreV1().ConfigMaps(namespace).Get(ctx, name, metav1.GetOptions{})
+	if apierrors.IsNotFound(err) {
+		a.logger.Debugf(ctx, "creating configmap '%s/%s'", namespace, name)
+
+		_, err := a.k8sClient.CoreV1().ConfigMaps(namespace).Create(ctx, configMap, metav1.CreateOptions{})
+		if apierrors.IsAlreadyExists(err) {
+			a.logger.Debugf(ctx, "already created configmap '%s/%s'", namespace, name)
+		} else if err != nil {
+			return microerror.Mask(err)
+		}
 		a.logger.Debugf(ctx, "created configmap '%s/%s'", namespace, name)
+
+		return nil
 	}
+
+	a.logger.Debugf(ctx, "updating configmap '%s/%s'", namespace, name)
+
+	_, err = a.k8sClient.CoreV1().ConfigMaps(namespace).Update(ctx, configMap, metav1.UpdateOptions{})
+	if err != nil {
+		return microerror.Mask(err)
+	}
+
+	a.logger.Debugf(ctx, "updated configmap '%s/%s'", namespace, name)
 
 	return nil
 }
