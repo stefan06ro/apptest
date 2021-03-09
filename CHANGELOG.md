@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Fix to `appcatalog` library for getting the latest entry in the app catalog.
+
 ## [0.10.2] - 2021-02-08
 
 ### Fixed
