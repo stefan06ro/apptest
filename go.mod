@@ -18,6 +18,8 @@ require (
 replace (
 	// Apply fix for CVE-2020-15114 not yet released in github.com/spf13/viper.
 	github.com/bketelsen/crypt => github.com/bketelsen/crypt v0.0.3
+	// Use v1.3.2 of gogo/protobuf to fix nancy alert.
+	github.com/gogo/protobuf v1.3.1 => github.com/gogo/protobuf v1.3.2
 	// Use v1.4.2 of gorilla/websocket to fix nancy alert.
 	github.com/gorilla/websocket v1.4.0 => github.com/gorilla/websocket v1.4.2
 	// Use v1.7.1 of viper to fix nancy alert.
