@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	monitoringv1alpha1 "github.com/giantswarm/apiextensions/v3/pkg/apis/monitoring/v1alpha1"
-	"github.com/giantswarm/apiextensions/v3/pkg/crd"
+	"github.com/giantswarm/app/v5/pkg/crd"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
@@ -59,8 +59,25 @@ func TestEnsureCRDs(t *testing.T) {
 		t.Fatalf("expected nil got %#q", err)
 	}
 
+	var crdGetter *crd.CRDGetter
+	{
+		cc := crd.Config{
+			Logger: config.Logger,
+		}
+
+		crdGetter, err = crd.NewCRDGetter(cc)
+		if err != nil {
+			t.Fatalf("expected nil got %#q", err)
+		}
+	}
+
+	customResourceDefinition, err := crdGetter.LoadCRD(ctx, "monitoring.giantswarm.io", "Silence")
+	if err != nil {
+		t.Fatalf("expected nil got %#q", err)
+	}
+
 	crds := []*apiextensionsv1.CustomResourceDefinition{
-		crd.LoadV1("monitoring.giantswarm.io", "Silence"),
+		customResourceDefinition,
 	}
 
 	// Ensure the CRD exists in the cluster.

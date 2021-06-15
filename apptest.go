@@ -162,6 +162,11 @@ func New(config Config) (*AppSetup, error) {
 func (a *AppSetup) InstallApps(ctx context.Context, apps []App) error {
 	var err error
 
+	err = a.createCatalogs(ctx, apps)
+	if err != nil {
+		return microerror.Mask(err)
+	}
+
 	err = a.createAppCatalogs(ctx, apps)
 	if err != nil {
 		return microerror.Mask(err)
@@ -444,6 +449,46 @@ func (a *AppSetup) createApps(ctx context.Context, apps []App) error {
 		}
 
 		a.logger.Debugf(ctx, "created %#q app cr", appCR.Name)
+	}
+
+	return nil
+}
+
+func (a *AppSetup) createCatalogs(ctx context.Context, apps []App) error {
+	for _, app := range apps {
+		catalogURL, err := getCatalogURL(app)
+		if err != nil {
+			return microerror.Mask(err)
+		}
+
+		a.logger.Debugf(ctx, "creating %#q catalog cr", app.CatalogName)
+
+		catalogCR := &v1alpha1.Catalog{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      app.CatalogName,
+				Namespace: metav1.NamespaceDefault,
+				Labels: map[string]string{
+					// Processed by app-operator-unique.
+					label.AppOperatorVersion: uniqueAppCRVersion,
+				},
+			},
+			Spec: v1alpha1.CatalogSpec{
+				Description: app.CatalogName,
+				Title:       app.CatalogName,
+				Storage: v1alpha1.CatalogSpecStorage{
+					Type: "helm",
+					URL:  catalogURL,
+				},
+			},
+		}
+		err = a.ctrlClient.Create(ctx, catalogCR)
+		if apierrors.IsAlreadyExists(err) {
+			a.logger.Debugf(ctx, "%#q catalog CR already exists", catalogCR.Name)
+		} else if err != nil {
+			return microerror.Mask(err)
+		}
+
+		a.logger.Debugf(ctx, "created %#q catalog cr", app.CatalogName)
 	}
 
 	return nil
