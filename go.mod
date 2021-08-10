@@ -3,7 +3,7 @@ module github.com/giantswarm/apptest
 go 1.16
 
 require (
-	github.com/giantswarm/apiextensions/v3 v3.30.0
+	github.com/giantswarm/apiextensions/v3 v3.31.0
 	github.com/giantswarm/app/v5 v5.0.1
 	github.com/giantswarm/appcatalog v0.6.0
 	github.com/giantswarm/backoff v0.2.0
