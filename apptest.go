@@ -66,6 +66,7 @@ type AppSetup struct {
 	ctrlClient client.Client
 	k8sClient  kubernetes.Interface
 	logger     micrologger.Logger
+	restConfig *rest.Config
 }
 
 // New creates a new configured app setup library.
@@ -152,6 +153,7 @@ func New(config Config) (*AppSetup, error) {
 		ctrlClient: ctrlClient,
 		k8sClient:  k8sClient,
 		logger:     config.Logger,
+		restConfig: restConfig,
 	}
 
 	return a, nil
@@ -252,6 +254,11 @@ func (a *AppSetup) K8sClient() kubernetes.Interface {
 // CtrlClient returns a controller-runtime client for use in automated tests.
 func (a *AppSetup) CtrlClient() client.Client {
 	return a.ctrlClient
+}
+
+// RESTConfig returns a Kubernetes REST config for use in automated tests.
+func (a *AppSetup) RESTConfig() *rest.Config {
+	return a.restConfig
 }
 
 func (a *AppSetup) CleanUp(ctx context.Context, apps []App) error {

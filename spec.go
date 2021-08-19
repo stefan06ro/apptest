@@ -6,6 +6,7 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -29,6 +30,9 @@ type Interface interface {
 
 	// CleanUp removes created resources while installing apps.
 	CleanUp(ctx context.Context, apps []App) error
+
+	// RESTConfig returns a Kubernetes REST config for use in automated tests.
+	RESTConfig() *rest.Config
 }
 
 type App struct {
