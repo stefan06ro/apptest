@@ -9,10 +9,10 @@ require (
 	github.com/giantswarm/backoff v0.2.0
 	github.com/giantswarm/microerror v0.3.0
 	github.com/giantswarm/micrologger v0.5.0
-	k8s.io/api v0.20.10
-	k8s.io/apiextensions-apiserver v0.20.10
-	k8s.io/apimachinery v0.20.10
-	k8s.io/client-go v0.20.10
+	k8s.io/api v0.20.11
+	k8s.io/apiextensions-apiserver v0.20.11
+	k8s.io/apimachinery v0.20.11
+	k8s.io/client-go v0.20.11
 	sigs.k8s.io/controller-runtime v0.6.5
 )
 
